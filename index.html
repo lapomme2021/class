@@ -1,0 +1,288 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><title>[진솔한 그림책 만들기] 프롬프트 도우미</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Jua&display=swap">
+<style>
+/* 레이아웃: 위쪽 탭 3개, 그 아래 왼쪽 입력칸 + 오른쪽 완성 문장(넓은 화면), 좁은 화면은 한 줄로 쌓기 */
+:root{
+  --bg:#EEF3FA; --surface:#FFFFFF; --ink:#262A33; --muted:#5F6676; --line:#D5DDEA;
+  --coral:#E8553A; --coral-soft:#FFE3DB; --green:#4E8A2E; --green-soft:#E3F1D6; --mark:#FFE9A8; --mark-ink:#5A4200;
+  --display:'Jua','Gowun Dodum','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --body:'Gowun Dodum','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#161B26; --surface:#1F2533; --ink:#ECEFF6; --muted:#A3ABBD; --line:#343C50;
+    --coral:#FF8A6E; --coral-soft:#4A2A25; --green:#A5D27E; --green-soft:#2B3A22; --mark:#5A4A12; --mark-ink:#FFE9A8; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#161B26; --surface:#1F2533; --ink:#ECEFF6; --muted:#A3ABBD; --line:#343C50;
+  --coral:#FF8A6E; --coral-soft:#4A2A25; --green:#A5D27E; --green-soft:#2B3A22; --mark:#5A4A12; --mark-ink:#FFE9A8; color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:1040px;margin:0 auto}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(26px,5vw,38px);line-height:1.2;margin:4px 0 18px;text-wrap:balance}
+.lead{color:var(--muted);margin:0 0 18px;max-width:60ch}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.tab{font:inherit;font-family:var(--display);font-size:17px;border:2px solid var(--line);background:var(--surface);color:var(--ink);
+  padding:9px 16px;border-radius:999px;cursor:pointer;min-height:44px}
+.tab[aria-selected="true"]{background:var(--coral);border-color:var(--coral);color:#fff}
+:root[data-theme="dark"] .tab[aria-selected="true"]{color:#2A120C}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tab[aria-selected="true"]{color:#2A120C}}
+.tab:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--green);outline-offset:2px}
+.panel{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:18px;align-items:start}
+@media (max-width:820px){.panel{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px}
+.card h2{font-family:var(--display);font-weight:400;font-size:21px;margin:0 0 4px}
+.hint{color:var(--muted);font-size:14px;margin:0 0 12px}
+label{display:block;font-weight:700;font-size:15px;margin:12px 0 4px}
+input[type=text],textarea{width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:2px solid var(--line);border-radius:10px;padding:9px 12px}
+textarea{resize:vertical;min-height:84px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 8px}
+.chip{font:inherit;font-size:14px;border:2px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer;min-height:38px}
+.chip[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft);color:var(--ink)}
+.seg{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.out{position:sticky;top:12px}
+@media (max-width:820px){.out{position:static}pre.prompt{max-height:none}}
+.out-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.out-head h2{margin:0}
+pre.prompt{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font-family:var(--body);font-size:15px;line-height:1.7;background:var(--bg);border:2px dashed var(--line);border-radius:10px;padding:14px;max-height:62vh;overflow:auto;user-select:text}
+mark{background:var(--mark);color:var(--mark-ink);border-radius:4px;padding:0 3px}
+.copy{font-family:var(--display);font-size:18px;border:0;background:var(--green);color:#fff;border-radius:999px;padding:10px 22px;cursor:pointer;min-height:46px}
+:root[data-theme="dark"] .copy{color:#14210B}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .copy{color:#14210B}}
+.copy.done{background:var(--coral)}
+.status{min-height:1.5em;margin:8px 0 0;font-size:14px;color:var(--muted)}
+.note{background:var(--coral-soft);border-radius:10px;padding:10px 14px;font-size:14px;margin:14px 0 0}
+.sub{margin-top:18px}
+ol.steps{margin:6px 0 0;padding-left:1.3em}
+ol.steps li{margin:0 0 6px}
+@media (prefers-reduced-motion:no-preference){.tab,.chip,.copy{transition:background .15s,border-color .15s}}
+</style>
+
+<div class="wrap">
+  <h1>[진솔한 그림책 만들기] 프롬프트 도우미</h1>
+
+  <div class="tabs" role="tablist" aria-label="순서">
+    <button class="tab" role="tab" id="t1" aria-controls="p1" aria-selected="true">① 원고 보내기 메시지</button>
+    <button class="tab" role="tab" id="t2" aria-controls="p2" aria-selected="false">② 그림 생성 메시지</button>
+    <button class="tab" role="tab" id="t3" aria-controls="p3" aria-selected="false">③ 수정 요청 메시지</button>
+  </div>
+
+  <section class="panel" id="p1" role="tabpanel" aria-labelledby="t1">
+    <div class="card">
+      <h2>하는 순서</h2>
+      <ol class="steps">
+        <li>삼성 노트 앱을 열고 새 노트를 만들어요.</li>
+        <li>장면 1: 장면 2: 장면 3: 장면 4: 로 나누어, 원고지에 쓴 글을 그대로 타이핑해요.</li>
+        <li>타이핑한 글을 모두 선택해서 복사해요.</li>
+        <li>아래 '원고' 칸에 붙여넣어요.</li>
+        <li>만들어진 메시지를 복사해서 AI 채팅에 보내 주세요.</li>
+      </ol>
+      <p class="note">띄어쓰기, 문장부호, 큰따옴표까지 원고지와 똑같이 쳐 주세요. 이 단계에서는 그림을 아직 그리지 않아요.</p>
+    </div>
+    <div class="card">
+      <h2>원고</h2>
+      <p class="hint">삼성 노트에서 복사한 원고를 붙여넣어요.</p>
+      <label for="fixText">장면 1~4 원고</label>
+      <textarea id="fixText" style="min-height:220px" placeholder="장면 1: …&#10;장면 2: …&#10;장면 3: …&#10;장면 4: …"></textarea>
+    </div>
+    <div class="card out">
+      <div class="out-head"><h2>프롬프트 복사해서 바로 붙여넣기</h2><button class="copy" data-for="out1">복사하기</button></div>
+      <pre class="prompt" id="out1" tabindex="0"></pre>
+      <p class="status" id="st1" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <section class="panel" id="p2" role="tabpanel" aria-labelledby="t2" hidden>
+    <div class="card">
+      <h2>그림책 정보</h2>
+      <p class="hint">수행평가 개요에 쓴 그림 설명을 옮겨 적어요.</p>
+      <label for="title">그림책 제목</label>
+      <input type="text" id="title" autocomplete="off" placeholder="예: 비 오는 날의 우산 두 개">
+      <label for="d0">표지 그림 설명</label>
+      <textarea id="d0"></textarea>
+      <label for="d1">장면 1 그림 설명</label>
+      <textarea id="d1"></textarea>
+      <label for="d2">장면 2 그림 설명</label>
+      <textarea id="d2"></textarea>
+      <label for="d3">장면 3 그림 설명</label>
+      <textarea id="d3"></textarea>
+      <label for="d4">장면 4 그림 설명</label>
+      <textarea id="d4"></textarea>
+    </div>
+    <div class="card out">
+      <div class="out-head"><h2>프롬프트 복사해서 바로 붙여넣기</h2><button class="copy" data-for="out2">복사하기</button></div>
+      <pre class="prompt" id="out2" tabindex="0"></pre>
+      <p class="status" id="st2" aria-live="polite"></p>
+      <p class="note">'① 원고 보내기 메시지'를 보낸 같은 대화창에서 보내 주세요. 표지와 장면 1~4를 A4 가로 이미지 한 장에 모아서 만들어요.</p>
+    </div>
+  </section>
+
+  <section class="panel" id="p3" role="tabpanel" aria-labelledby="t3" hidden>
+    <div class="card">
+      <h2>부분 수정 요청하기</h2>
+      <p class="hint">수정이 필요한 부분만 다시 요청해 주세요.</p>
+      <p class="note" style="font-weight:700">⚠ 고칠 곳을 먼저 모두 모아서 한 번에 요청하세요. 수정할 때마다 이미지 한도가 줄어들어요.</p>
+      <label for="chg">바꾸고 싶은 것</label>
+      <div class="chips" id="chgChips">
+        <button type="button" class="chip" aria-pressed="false">인물의 옷 색</button>
+        <button type="button" class="chip" aria-pressed="false">배경</button>
+        <button type="button" class="chip" aria-pressed="false">인물의 표정</button>
+        <button type="button" class="chip" aria-pressed="false">말풍선 글자</button>
+        <button type="button" class="chip" aria-pressed="false">원고 내용</button>
+      </div>
+      <input type="text" id="chg" autocomplete="off" placeholder="고르거나 직접 써도 돼요. 여러 개면 쉼표로 이어 써요.">
+      <label for="how">어떻게 바꿀까요? <span style="font-weight:400;color:var(--muted)">(선택)</span></label>
+      <input type="text" id="how" autocomplete="off" placeholder="예: 노란색에서 파란색으로">
+    </div>
+    <div>
+      <div class="card out">
+        <div class="out-head"><h2>프롬프트 복사해서 바로 붙여넣기</h2><button class="copy" data-for="out3">복사하기</button></div>
+        <pre class="prompt" id="out3" tabindex="0"></pre>
+        <p class="status" id="st3" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var BLANK='\u0000';
+  // 문장 만들기: 값이 비면 노란 표시 칸이 들어간다.
+  function val(id,ph){var v=$(id).value.trim();return v?{t:v}:{b:ph}}
+  function render(pre,lines){
+    pre.textContent='';
+    var blanks=0,plain=[];
+    lines.forEach(function(parts,i){
+      var line='';
+      parts.forEach(function(p){
+        if(typeof p==='string'){pre.appendChild(document.createTextNode(p));line+=p}
+        else if(p.t!==undefined){pre.appendChild(document.createTextNode(p.t));line+=p.t}
+        else{var m=document.createElement('mark');m.textContent='('+p.b+')';pre.appendChild(m);line+='('+p.b+')';blanks++}
+      });
+      if(i<lines.length-1)pre.appendChild(document.createTextNode('\n'));
+      plain.push(line);
+    });
+    pre.dataset.plain=plain.join('\n');pre.dataset.blanks=blanks;
+  }
+  function build1(){
+    var L=[
+      ['저는 중학교 1학년이고, 제 경험을 글로 써서 그림책을 만들려고 해요.'],
+      ['아래는 제가 쓴 원고예요. 장면 1부터 장면 4까지 나뉘어 있어요.'],
+      ['']
+    ];
+    var raw=$('fixText').value.replace(/\r/g,'').split('\n');
+    while(raw.length&&!raw[raw.length-1].trim())raw.pop();
+    while(raw.length&&!raw[0].trim())raw.shift();
+    if(raw.length)raw.forEach(function(r){L.push([r])});else L.push([{b:'위 칸에 원고를 붙여넣어 주세요'}]);
+    L.push(['']);
+    L.push(['이 원고를 한 글자도 고치지 말고 그대로 기억해 주세요. 앞으로 만들 그림책의 글은 모두 이 원고를 따라야 해요.']);
+    L.push(['- 지은이 이름은 어디에도 쓰지 마세요.']);
+    L.push(['- 지금은 그림을 그리지 말고, "원고를 받았어요"라고만 답해 주세요.']);
+    render($('out1'),L);
+  }
+  function build2(){
+    var T=val('title','제목을 써 주세요');
+    var L=[
+      ['위에서 보낸 원고(장면 1~4)를 기준으로, 그림책의 표지와 장면 1~4, 모두 5쪽을 이미지 한 장에 모아서 그려 주세요.'],
+      [''],
+      ['저는 중학교 1학년이고, 제 경험을 글로 써서 그림책을 만들고 있어요.'],
+      [''],
+      ['[이미지 구성]'],
+      ['- 크기: A4 가로 방향 이미지 한 장 (그대로 인쇄할 예정)'],
+      ['- 이미지 한 장을 5개의 칸으로 나누고, 칸마다 얇은 테두리선을 넣어 주세요.'],
+      ['- 위쪽 줄은 같은 크기의 칸 3개예요. 왼쪽부터 표지, 장면 1, 장면 2 순서예요.'],
+      ['- 아래쪽 줄은 칸 2개예요. 왼쪽부터 장면 3, 장면 4 순서예요.'],
+      [''],
+      ['[그림책 정보]'],
+      ['- 제목: ',T],
+      [''],
+      ['[공통 규칙]'],
+      ['- 5칸 모두 같은 그림체와 색감으로 그리고, 인물의 얼굴, 머리 모양, 옷은 똑같이 그려 주세요.'],
+      ['- 대사는 원고에서 큰따옴표(“ ”)로 쓴 말 중에서 골라 말풍선으로 그림 안에 넣어 주세요. 원고에 있는 말을 그대로 쓰고, 없는 말은 지어내지 마세요.'],
+      ['- 대사가 없는 장면에는 말풍선을 넣지 않아도 돼요. 말풍선은 한 칸에 2개까지, 짧게 넣어 주세요.'],
+      ['- 지은이 이름(작가 이름)은 어디에도 넣지 마세요.'],
+      ['- 장면 1~4 칸에는 위쪽 여백에 그 장면의 원고 글을 한 글자도 고치지 말고 그대로 넣어 주세요. 글이 잘 읽히게 또렷하게 써 주세요.'],
+      ['- 표지에는 제목만 넣고, 칸 번호는 쓰지 마세요.'],
+      [''],
+      ['[표지]'],
+      ['- 제목 글자: "',T,'" (그림 위쪽에 크고 또렷하게 넣어 주세요.)'],
+      ['- 그림 설명: ',val('d0','표지 그림 설명을 써 주세요')]
+    ];
+    for(var i=1;i<=4;i++){
+      L.push(['']);L.push(['[장면 '+i+']']);
+      L.push(['- 글 내용: 위 원고의 장면 '+i]);
+      L.push(['- 그림 설명: ',val('d'+i,'장면 '+i+' 그림 설명을 써 주세요')]);
+    }
+    render($('out2'),L);
+  }
+  function build3(){
+    var c=$('chg').value.trim(),h=$('how').value.trim(),lines;
+    if(c==='원고 내용'){
+      lines=[['방금 그림 속 글자가 제 원고와 달라요. 원고 내용 그대로 정확하게 고쳐 주세요.'],
+        ['- 틀린 곳과 맞는 글: ',val('how','틀린 곳과 원고에 쓴 맞는 글을 써 주세요')],
+        ['나머지는 그대로 유지해 주세요.']];
+      $('how').placeholder='예: 장면 2 말풍선 → "어서 이리 와, 비 맞는다."';
+    }else{
+      lines=[['방금 그림에서 ',val('chg','바꿀 것'),'만 바꿔 주세요. 나머지는 그대로 유지해 주세요.']];
+      if(h)lines.push(['바꾸는 방법: '+h]);
+      $('how').placeholder='예: 노란색에서 파란색으로';
+    }
+    render($('out3'),lines);
+  }
+  function all(){build1();build2();build3()}
+  // 탭
+  var tabs=['t1','t2','t3'],panels=['p1','p2','p3'];
+  function show(i){
+    tabs.forEach(function(t,j){$(t).setAttribute('aria-selected',j===i?'true':'false');$(panels[j]).hidden=j!==i});
+  }
+  tabs.forEach(function(t,i){$(t).addEventListener('click',function(){show(i)})});
+  var h=(location.hash||'').replace('#','');
+  if(h==='step2')show(1);else if(h==='step3')show(2);
+  // 칩
+  function chipGroup(boxId,inputId){
+    var box=$(boxId);
+    box.addEventListener('click',function(e){
+      var b=e.target.closest('.chip');if(!b)return;
+      Array.prototype.forEach.call(box.children,function(c){c.setAttribute('aria-pressed',c===b?'true':'false')});
+      $(inputId).value=b.textContent;all();
+    });
+    $(inputId).addEventListener('input',function(){
+      Array.prototype.forEach.call(box.children,function(c){c.setAttribute('aria-pressed',c.textContent===$(inputId).value?'true':'false')});
+    });
+  }
+  chipGroup('chgChips','chg');
+  Array.prototype.forEach.call(document.querySelectorAll('input[type=text],textarea'),function(el){el.addEventListener('input',all)});
+  // 복사
+  function fallbackCopy(text,pre){
+    var ok=false;
+    try{var ta=document.createElement('textarea');ta.value=text;ta.setAttribute('readonly','');ta.style.cssText='position:fixed;top:0;left:0;opacity:0';
+      document.body.appendChild(ta);ta.select();ok=document.execCommand('copy');document.body.removeChild(ta)}catch(e){ok=false}
+    if(!ok){var r=document.createRange();r.selectNodeContents(pre);var s=window.getSelection();s.removeAllRanges();s.addRange(r)}
+    return ok;
+  }
+  document.addEventListener('click',function(e){
+    var btn=e.target.closest('.copy');if(!btn)return;
+    var pre=$(btn.dataset.for),text=pre.dataset.plain||pre.textContent,n=+pre.dataset.blanks||0;
+    var st=pre.nextElementSibling&&pre.nextElementSibling.classList.contains('status')?pre.nextElementSibling:btn.closest('.card').querySelector('.status');
+    function done(ok){
+      if(ok){btn.textContent='복사했어요!';btn.classList.add('done');
+        st.textContent=n?'복사했어요. 아직 안 쓴 칸이 '+n+'개 있어요. 채운 뒤 다시 복사해 주세요.':'복사했어요. AI 입력창에 붙여 넣으세요.';
+        setTimeout(function(){btn.textContent='복사하기';btn.classList.remove('done')},2200);
+      }else st.textContent='자동 복사가 안 돼요. 선택된 글자를 눌러서 복사(Ctrl+C)해 주세요.';
+    }
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){done(true)},function(){done(fallbackCopy(text,pre))});
+    }else done(fallbackCopy(text,pre));
+  });
+  all();
+})();
+</script>
+</body></html>
